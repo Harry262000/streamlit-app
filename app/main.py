@@ -3,6 +3,8 @@ from PIL import Image
 import base64
 from io import BytesIO  # Import BytesIO from the io module
 import os  # Import os for file path checking
+import json
+from streamlit_calendar import calendar
 
 # Initial page config
 st.set_page_config(
@@ -84,7 +86,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Create a div for the circular image
 # Convert the image to base64 for inline display
 buffered = BytesIO()
 image.save(buffered, format="JPEG")
@@ -124,50 +125,152 @@ with st.sidebar:
     st.markdown('<div class="sidebar-text">Traveling</div>', unsafe_allow_html=True)
     st.markdown('<div class="sidebar-text">Gaming</div>', unsafe_allow_html=True)
 
-# Title of the Streamlit app
-st.title("**Showcase of My GitHub Open-Source Projects**")
+# Title 
+st.title("Tracking My Impact: Contributions Across Various Open Source Projects")
 
-
-# Add a round picture
-# image_path = "assets/images/86480339.jpeg"
-# image = Image.open(image_path)
-# st.image(image, caption="My GitHub Contributions",)
-# Three-line subheading
 st.subheader("Who Am I?")
-st.write("I'm a passionate open-source contributor with a focus on impactful projects.")
-st.write("I work on solving complex issues, merging pull requests, and contributing to the community.")
-st.write("Explore my contributions and see how I've been making a difference in the open-source world.")
+st.write("As a passionate open-source contributor, I focus on impactful projects that drive innovation. Committed to pushing the boundaries of technology, I transform complex challenges into elegant solutions. Explore my journey of exploration and creativity across a diverse range of projects and see how my contributions are making a difference!")
 
-row1 = st.columns(3)
-row2 = st.columns(3)
+# Define the path to your configuration file
+config_file = "app/config.json"
 
-for col in row1 + row2:
-    tile = col.container(height=120)
-    tile.title(":balloon:")
+# Load metrics from the configuration file or initialize if not present
+if os.path.exists(config_file):
+    with open(config_file, "r") as f:
+        metrics = json.load(f)
+else:
+    metrics = {
+        "Total issues solved": 100,
+        "Total pull requests merged": 50,
+        "Projects contributed to": 10,
+        "New features added": 20
+    }
 
-# Create tabs
-tab1, tab2 = st.tabs(["Tab 1", "Tab 2"])
+# Function to save metrics to the configuration file
+def save_metrics(metrics):
+    with open(config_file, "w") as f:
+        json.dump(metrics, f, indent=4)
+
+# Define columns
+row1 = st.columns(4)
+
+# Display metrics
+for col, (label, value) in zip(row1, metrics.items()):
+    with col:
+        st.metric(label=label, value=value)
+
+# Password protection
+password = st.text_input("Enter admin password to edit metrics:", type="password")
+
+# Show input fields if the correct password is entered
+if password == "your_secure_password":
+    st.markdown("""
+        <style>
+        .hidden-input {
+            display: none;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Use hidden number inputs for editing metrics
+    for label in metrics.keys():
+        with st.expander(f"Edit {label}", expanded=False):
+            new_value = st.number_input(
+                label,
+                value=metrics[label],
+                step=1,
+                key=label,
+                format="%d"
+            )
+            if new_value != metrics[label]:
+                metrics[label] = new_value
+                save_metrics(metrics)
+                st.success(f"{label} updated successfully!")
+
+# Load existing events from a JSON file
+def load_events():
+    if os.path.exists('events.json'):
+        with open('events.json', 'r') as f:
+            return json.load(f)
+    return []
+
+# Save events to a JSON file
+def save_events(events):
+    with open('events.json', 'w') as f:
+        json.dump(events, f)
+
+# Load existing events from a JSON file
+def load_events():
+    if os.path.exists('events.json'):
+        with open('events.json', 'r') as f:
+            return json.load(f)
+    return []
+
+# Save events to a JSON file
+def save_events(events):
+    with open('events.json', 'w') as f:
+        json.dump(events, f)
+
+# Load the events
+calendar_events = load_events()
+
+tab1, tab2 = st.tabs(["Calendar view", "Graph view"])
 
 # Content for Tab 1
 with tab1:
-    st.header("This is Tab 1")
-    st.write("Content for the first tab goes here.")
+    calendar_options = {
+        "editable": True,
+        "selectable": True,
+        "headerToolbar": {
+            "left": "today prev,next",
+            "center": "title",
+            "right": "dayGridDay,dayGridWeek,dayGridMonth",
+        },
+        "slotMinTime": "06:00:00",
+        "slotMaxTime": "18:00:00",
+        "initialView": "dayGridMonth",
+    }
+    
+    custom_css = """
+        .fc-event-past {
+            opacity: 0.8;
+        }
+        .fc-event-time {
+            font-style: italic;
+        }
+        .fc-event-title {
+            font-weight: 700;
+        }
+        .fc-toolbar-title {
+            font-size: 2rem;
+        }
+    """
+    
+    password = st.text_input("Enter admin password to edit events:", type="password")
 
+    if password == "your_secure_password":
+        st.write("You are logged in as admin.")
+        st.write("Click on a date to add an event.")
+        
+        selected_date = st.date_input("Select a date")
+        event_title = st.text_input("Event Title")
+        event_start = st.time_input("Start Time")
+        event_end = st.time_input("End Time")
+        
+        if st.button("Add Event"):
+            new_event = {
+                "title": event_title,
+                "start": f"{selected_date}T{event_start}",
+                "end": f"{selected_date}T{event_end}",
+            }
+            calendar_events.append(new_event)
+            save_events(calendar_events)
+            st.success("Event added successfully!")
+    
+    # Display the calendar without showing the returned data
+    calendar_view = calendar(events=calendar_events, options=calendar_options, custom_css=custom_css)
+    st.components.v1.html(calendar_view, height=700)
 
-st.button('Hit me')
-st.data_editor('Edit data', data)
-st.checkbox('Check me out')
-st.radio('Pick one:', ['nose','ear'])
-st.selectbox('Select', [1,2,3])
-st.multiselect('Multiselect', [1,2,3])
-st.slider('Slide me', min_value=0, max_value=10)
-st.select_slider('Slide to select', options=[1,'2'])
-st.text_input('Enter some text')
-st.number_input('Enter a number')
-st.text_area('Area for textual entry')
-st.date_input('Date input')
-st.time_input('Time entry')
-st.file_uploader('File uploader')
-st.download_button('On the dl', data)
-st.camera_input("一二三,茄子!")
-st.color_picker('Pick a color')
+# Content for Tab 2 (Graph view)
+with tab2:
+    st.write("Graph view content here")
